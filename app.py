@@ -10,6 +10,8 @@ from CLASS import IndexReplication
 IndexReplication = IndexReplication()
 data = IndexReplication.data
 spy = IndexReplication.spy
+
+
 spy_fig = px.line(spy, x="Date", y= "Close", title=  "S&P 500")
 
 

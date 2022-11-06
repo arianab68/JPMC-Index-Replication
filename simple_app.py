@@ -1,24 +1,29 @@
 import plotly.express as px
+import plotly.graph_objects as go
 import dash
 from dash import dcc, html, Dash, dash_table
+from dash.dependencies import Input, Output, State
 import numpy as np
 import pandas as pd
-from dash.dependencies import Input, Output, State
 import utils.dash_reusable_components as drc
 from CLASS import IndexReplication
 
+
+#instantiating class and loading data
 IndexReplication = IndexReplication()
 data = IndexReplication.data
 spy = IndexReplication.spy
-spy_fig = px.line(spy, x="Date", y= "Close", title=  "S&P 500")
 
+#getting the overall portfolio performance of sp500 AKA the cumulative return over time using percent change
+daily_pct_change_spy = spy['Percent_Change'].reset_index()['Percent_Change'] 
+cumprod_daily_pct_change_spy = ((1 + daily_pct_change_spy).cumprod() - 1) * 100
 
-app = Dash(
-    __name__,
-    meta_tags=[
-        {"name": "viewport", "content": "width=device-width, initial-scale=1.0"}
-    ],
-)
+fig = go.Figure()
+fig.add_trace(go.Scatter(x = spy.Date, y=cumprod_daily_pct_change_spy, name = 'S&P500', mode ='lines'))
+fig.update_layout(title = "Cumulative Returns", title_x = 0.5, xaxis_title = 'Date', yaxis_title = 'Cumulative Return (%)')
+    
+
+app = Dash( __name__)
 app.title = "JPMC Index Replication"
 server = app.server
 
@@ -77,12 +82,14 @@ app.layout = html.Div(
                                         dcc.Input(
                                                 id='user-input', 
                                                 type='text', 
-                                                placeholder="I want..."
+                                                placeholder="I want...",
+                                                style={'color': 'white'}
                                                 ),
                                         html.Br(),
                                         html.Button(
                                             "Generate Solution",
                                             id="button-generate-solution",
+                                            style= {'color': 'white'}
                                         ),
                                     ],
                                 ),
@@ -94,10 +101,10 @@ app.layout = html.Div(
                         ),
                         html.Div(
                             id="div-graphs",
-                            # children=dcc.Graph(
-                            #     id="graph-sklearn-svm",
-                            #     figure=spy_fig,
-                            # ),
+                            children=dcc.Graph(
+                                id="graph-sklearn-svm",
+                                figure=fig,
+                            ),
                         ),
                     ],
                 )
@@ -115,16 +122,8 @@ app.layout = html.Div(
     [State("user-input", "value")],
 )
 def update_graph(n_clicks, value):
-    
-    top_10 = ['AAPL', 'MSFT', 'AMZN', 'TSLA', 'GOOGL', 'V', 'XOM', 'JNJ', 'JPM', 'NVDIA']
-    d = pd.DataFrame({'Company': top_10,
-                      'Returns (%)': [round(data[data['Symbol'] == stock]['Percent_Change'].sum() * 100, 2) for stock in top_10]})
-    sp500_top_holdings_table = dash_table.DataTable(style_data={
-                                    'overflowY': 'auto',
-                                    'width': '100px'}, 
-                                    data = d.to_dict('records'),
-                                    fill_width=True,
-                                    fixed_rows={'headers': True})
+
+    #if no input is given we give the default graph of the sp500
     if not value:
         return [
                 html.Div(
@@ -132,68 +131,47 @@ def update_graph(n_clicks, value):
                     children=[
                         dcc.Loading(
                         className="graph-wrapper",
-                        children=dcc.Graph(id="SPY", figure=spy_fig, style = {'width': '700px', 'height': '380px'}),
+                        children=dcc.Graph(id="SPY", figure = fig),
                         style={"display": "none"},
                         ),
                     ],
                 ),
+            ]
+    
+    #getting the best portfolio
+    best_portfolio = IndexReplication.index_replicationV2(value)
+    port_time_series = IndexReplication.compound_timeseries(best_portfolio) 
+    cumprod_daily_pct_change = ((1 + port_time_series).cumprod() - 1) * 100
+
+    #getting portfolio correlation to sp500
+    spy_time_series = spy['Percent_Change'].reset_index()['Percent_Change']
+    corr = port_time_series.corr(spy_time_series)
+
+    #getting total returns of portfolio and sp500 over the timeframe
+    portfolio_returns_total = str(round(cumprod_daily_pct_change[len(cumprod_daily_pct_change) - 1], 2)) + "%"
+    sp_returns_total = str(round(cumprod_daily_pct_change_spy[len(cumprod_daily_pct_change_spy) -  1], 2)) + "%"
+
+
+    #updating main graph to have portfolio chart
+    fig.add_trace(go.Scatter(x = data.Date, y=cumprod_daily_pct_change, name = 'Proposed Portfolio', mode ='lines'))
+    
+    
+
+    return [
                 html.Div(
-                    id="graphs-container",
+                    id="svm-graph-container",
                     children=[
-                        html.Label("Top 10 S&P500 Holdings", style={'text-align': 'center'}),
-                        sp500_top_holdings_table,
+                        dcc.Loading(
+                        className="graph-wrapper",
+                        children=dcc.Graph(id="SPY", figure = fig),
+                        style={"display": "none"},
+                        ),
+                        html.Label(f"Correlation to S&P500: {corr}", style={'text-align': 'center'}),
+                        html.Label(f"Total Portfolio Return: {portfolio_returns_total}", style={'text-align': 'center'}),
+                        html.Label(f"Total S&P500 Return: {sp_returns_total}", style={'text-align': 'center'})
                     ],
                 ),
             ]
-
-    best_portfolio = IndexReplication.index_replicationV2(value)
-
-    portfolio_holdings = pd.DataFrame({'Company': best_portfolio,
-                      'Returns (%)': [round(data[data['Symbol'] == stock]['Percent_Change'].sum() * 100, 2) for stock in best_portfolio]})
-
-    port_time_series = IndexReplication.compound_timeseries(best_portfolio)
-    spy_time_series = spy['Percent_Change'].reset_index()['Percent_Change']
-
-    portfolio_figure = px.scatter(x = port_time_series, y = spy_time_series)
-    
-    portfolio_holdings_table = dash_table.DataTable(style_data={
-                                    'overflowY': 'auto',
-                                    'width': '100px'}, 
-                                    data = portfolio_holdings.to_dict('records'),
-                                    fill_width=True,
-                                    fixed_rows={'headers': True})
-
-    return [
-        html.Div(
-            id="svm-graph-container",
-            children=[
-                dcc.Loading(
-                className="graph-wrapper",
-                children=dcc.Graph(id="SPY", figure=spy_fig, style = {'width': '700px', 'height': '380px'}),
-                style={"display": "none"},
-                ),
-                html.Br(),
-                html.Br(),
-                dcc.Loading(
-                className="graph-wrapper",
-                children=dcc.Graph(id="graph-sklearn-svm", figure=portfolio_figure, style = {'width': '700px', 'height': '380px'}),
-                style={"display": "none"},
-            )
-            ],
-        ),
-        html.Div(
-            id="graphs-container",
-            children=[
-                html.Label("Top 10 S&P 500 Holdings", style={'text-align': 'center'}),
-                sp500_top_holdings_table,
-                html.Br(),
-                html.Br(),
-                html.Br(),
-                html.Label("Portfolio Holdings", style={'text-align': 'center'}),
-                portfolio_holdings_table,
-            ],
-        ),
-    ]
     
 
 @app.callback(
@@ -203,20 +181,69 @@ def update_graph(n_clicks, value):
 )
 def update_allocation(n_clicks, value):
     if not value:
-        return
+        return []
     
     best_portfolio = IndexReplication.index_replicationV2(value)
-    port_time_series = IndexReplication.compound_timeseries(best_portfolio)
-    spy_time_series = spy['Percent_Change'].reset_index()['Percent_Change']
-    corr = port_time_series.corr(spy_time_series)
+    portfolio_holdings = pd.DataFrame({'Company': best_portfolio,
+                                        'Weight(%)': [round(100/len(best_portfolio), 2) for stock in best_portfolio]})
+    portfolio_holdings_table = dash_table.DataTable(style_data={
+                                    'overflowY': 'auto',
+                                    'width': '100px'}, 
+                                    data = portfolio_holdings.to_dict('records'),
+                                    fill_width=True,
+                                    fixed_rows={'headers': True})
     return [
-            html.Label("Proposed Allocation", style={'text-align': 'center'}),
-            html.Label(str(best_portfolio), style={'text-align': 'center'}),
-            html.Label("Correlation to S&P500", style={'text-align': 'center'}),
-            html.Label(str(corr), style={'text-align': 'center'})
+                html.Label("Proposed Allocation", style={'text-align': 'center'}),
+                portfolio_holdings_table
+
             ]
     
 
 # Running the server
 if __name__ == "__main__":
     app.run_server(debug=True)
+
+
+
+
+
+
+
+
+
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------
+#EXTRAS
+#----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    # return [
+    #     html.Div(
+    #         id="svm-graph-container",
+    #         children=[
+    #             dcc.Loading(
+    #             className="graph-wrapper",
+    #             children=dcc.Graph(id="SPY", figure=spy_fig, style = {'width': '700px', 'height': '380px'}),
+    #             style={"display": "none"},
+    #             ),
+    #             html.Br(),
+    #             html.Br(),
+    #             dcc.Loading(
+    #             className="graph-wrapper",
+    #             children=dcc.Graph(id="graph-sklearn-svm", figure=portfolio_figure, style = {'width': '700px', 'height': '380px'}),
+    #             style={"display": "none"},
+    #         )
+    #         ],
+    #     ),
+    #     html.Div(
+    #         id="graphs-container",
+    #         children=[
+    #             html.Label("Top 10 S&P 500 Holdings", style={'text-align': 'center'}),
+    #             sp500_top_holdings_table,
+    #             html.Br(),
+    #             html.Br(),
+    #             html.Br(),
+    #             html.Label("Portfolio Holdings", style={'text-align': 'center'}),
+    #             portfolio_holdings_table,
+    #         ],
+    #     ),
+    # ]

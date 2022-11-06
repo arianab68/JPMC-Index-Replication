@@ -70,7 +70,7 @@ class IndexReplication:
         return res
     
 
-
+    #OLD VERSION (NOT USED)
     def index_replication(self, inp):
         nlp = self.extraction(inp)
         filtered_df = self.corr_df.copy() #dataframe of all stocks with its time series correlation to the sp500
