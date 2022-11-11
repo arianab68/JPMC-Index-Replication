@@ -194,8 +194,9 @@ def update_allocation(n_clicks, value):
                                     fixed_rows={'headers': True})
     return [
                 html.Label("Proposed Allocation", style={'text-align': 'center'}),
-                portfolio_holdings_table
-
+                html.Br(),
+                portfolio_holdings_table,
+                html.Br()
             ]
     
 
