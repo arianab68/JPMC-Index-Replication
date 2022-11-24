@@ -153,7 +153,7 @@ def update_graph(n_clicks, value):
 
 
     #updating main graph to have portfolio chart
-    fig.add_trace(go.Scatter(x = data.Date, y=cumprod_daily_pct_change, name = 'Proposed Portfolio', mode ='lines'))
+    fig.add_trace(go.Scatter(x = data.Date, y=cumprod_daily_pct_change, name = str(best_portfolio), mode ='lines'))
     
     
 

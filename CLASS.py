@@ -19,6 +19,8 @@ class IndexReplication:
 
         self.log_df = pd.read_csv("data/log_df.csv").drop(columns = "Unnamed: 0")
 
+        self.mkdf = pd.read_csv("data/MarketCap.csv").drop(columns = "Unnamed: 0")
+
     
     def extract_number(self, inp):
         res = re.findall(r'\d+', inp)
@@ -153,7 +155,10 @@ class IndexReplication:
         kmeans = KMeans(n_clusters = mth).fit(X)
         df['cluster'] = kmeans.labels_
         for i in range(mth):
-            res.append(df[df.cluster == i].head(1).index[0])
+            cluster_companies = df[df.cluster == i].index.tolist()
+            filt = self.mkdf[self.mkdf['Symbol'].isin(cluster_companies)]
+            maxx = filt['marketCap'].max()
+            res.append(filt[filt['marketCap'] == maxx]['Symbol'].tolist()[0])
         return res
 
         
