@@ -102,7 +102,7 @@ class IndexReplication:
         else:
             res.append(("None", "num"))
         if cat:
-            res.append((cat[0], "cat"))
+            res.append((cat, "cat"))
         else:
             res.append(("None", "cat"))
         return res
@@ -153,7 +153,7 @@ class IndexReplication:
                 add = -1
         #if no sector constraint given, we give a default sector which is Technology
         if not filt:
-            filt = "Information Technology"
+            filt = ["Information Technology"]
 
         #accounting for the mathematical constraint
         num_stocks += add
@@ -163,7 +163,7 @@ class IndexReplication:
 
     def create_matrix(self, sector):
         corr_m = pd.DataFrame()
-        companies = self.log_df[self.log_df['Sector'] == sector]['Symbol'].unique().tolist()
+        companies = self.log_df[self.log_df['Sector'].isin(sector)]['Symbol'].unique().tolist()
         for stock in companies:
             temp = pd.DataFrame({stock: self.log_df[self.log_df['Symbol'] == stock].copy()['Log Returns'] }).reset_index()[stock]
             corr_m = pd.concat([corr_m, temp], axis=1)
@@ -171,7 +171,7 @@ class IndexReplication:
         return matrix
     
     
-    def optimization(self, mth, sector = "Information Technology"):
+    def optimization(self, mth, sector = ["Information Technology"]):
         df = pd.DataFrame()
         #initializing the resulting list of companies
         res = []

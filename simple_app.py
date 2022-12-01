@@ -44,7 +44,7 @@ app.layout = html.Div(
                             children=[
                                 html.A(
                                     "JPMC Index Replication",
-                                    href="https://github.com/plotly/dash-svm",
+                                    
                                     style={
                                         "text-decoration": "none",
                                         "color": "inherit",
@@ -55,11 +55,11 @@ app.layout = html.Div(
                         html.A(
                             id="banner-logo",
                             children=[
-                                html.Img(src=app.get_asset_url("dash-logo-new.png"))
+                                # html.Img(src=app.get_asset_url("unnamed.png"))
                             ],
-                            href="https://plot.ly/products/dash/",
                         ),
                     ],
+                    style = {"text-align": "center"}
                 )
             ],
         ),
@@ -98,6 +98,7 @@ app.layout = html.Div(
                                     children=[]
                                 )
                             ],
+                    
                         ),
                         html.Div(
                             id="div-graphs",
@@ -126,16 +127,16 @@ def update_graph(n_clicks, value):
     #if no input is given we give the default graph of the sp500
     if not value:
         return [
-                html.Div(
-                    id="svm-graph-container",
-                    children=[
-                        dcc.Loading(
-                        className="graph-wrapper",
-                        children=dcc.Graph(id="SPY", figure = fig),
-                        style={"display": "none"},
-                        ),
-                    ],
-                ),
+                # html.Div(
+                #     id="svm-graph-container",
+                #     children=[
+                #         dcc.Loading(
+                #         className="graph-wrapper",
+                #         children=dcc.Graph(id="SPY", figure = fig),
+                #         style={"display": "none"},
+                #         ),
+                #     ],
+                # ),
             ]
     
     #getting the best portfolio
