@@ -4,6 +4,11 @@ import re
 import itertools
 from word2number import w2n
 from sklearn.cluster import KMeans
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.stem import PorterStemmer
+nltk.download('punkt')
+nltk.download('averaged_perceptron_tagger')
 
 
 class IndexReplication:
@@ -53,14 +58,41 @@ class IndexReplication:
                     res.append(key)
         return res
 
-#NEED TO ADD CATEGORICAL EXTRACTION CODE
+
+    def extract_cat(self, inp):
+
+        ps = PorterStemmer()
+        sectors = {
+            'Industrials': [],
+            'Health Care': ['health'],
+            'Information Technology': ['technology', 'tech', 'game'],
+            'Communication Services': [],
+            'Consumer Staples': [],
+            'Consumer Discretionary': [],
+            'Utilities': [],
+            'Financials': ['bank', 'finance', 'financials'],
+            'Materials': [],
+            'Real Estate': ['real estate'],
+            'Energy': ['green', 'green-energy', 'energy']}
+        res = []
+        #the parts of speech we want to extract
+        pos_wanted = ["NN", "JJ", "JJS", "JJR", "NNS"]
+        words = nltk.word_tokenize(inp)
+        #tag words with their part of speech
+        tagged = nltk.pos_tag(words)
+        for word,pos in tagged:
+            if pos in pos_wanted and ps.stem(word) != "stock" and ps.stem(word) != "compani":   
+                for key, val in sectors.items():
+                    if word.lower() in val:
+                        res.append(key)
+        return res
 
 
     def extraction(self, inp):
         res = []
         mth = self.extract_mathematical(inp)
         num = self.extract_number(inp)
-        cat = False
+        cat = self.extract_cat(inp)
         if len(mth) > 0:
             res.append((mth[0], 'mth'))
         else:
@@ -70,7 +102,7 @@ class IndexReplication:
         else:
             res.append(("None", "num"))
         if cat:
-            res.append((cat, "cat"))
+            res.append((cat[0], "cat"))
         else:
             res.append(("None", "cat"))
         return res
@@ -109,8 +141,7 @@ class IndexReplication:
                 num_stocks = x
             #assigning cat constraint into filt as long as user have given certain sectors to invest into
             elif y == "cat" and x != "None":
-                if x != "None":
-                    filt = x
+                filt = x
   
         #if user gave a mathematical constraint
         if mth:
